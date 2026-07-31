@@ -1,5 +1,7 @@
 # MTS Viability Data Builder
 
+** TODO : have the CLI also be able to take in modifiable blk medium controls, different dilution series. **
+
 Fills in the calculated absorbance/viability blocks in this lab's MTS-assay
 Excel templates, given a raw Tecan Spark export to be pasted in Prism.
 Every calculated cell is written as a **live Excel formula**.
