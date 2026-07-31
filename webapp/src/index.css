@@ -1,0 +1,112 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fbfaff;
+  --surface: #ffffff;
+  --border: #e6e3ee;
+  --code-bg: #f4f2fb;
+  --accent: #7c3aed;
+  --accent-2: #a855f7;
+  --accent-bg: rgba(124, 58, 237, 0.08);
+  --accent-border: rgba(124, 58, 237, 0.35);
+  --accent-grad: linear-gradient(135deg, var(--accent-2), var(--accent));
+  --success: #16a34a;
+  --success-bg: rgba(22, 163, 74, 0.12);
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.09);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(20, 10, 40, 0.05), 0 1px 1px rgba(20, 10, 40, 0.03);
+  --shadow-md: 0 12px 28px -12px rgba(76, 29, 149, 0.22), 0 2px 8px -2px rgba(20, 10, 40, 0.06);
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 16px/150% var(--sans);
+  letter-spacing: 0.1px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #a7a4b3;
+    --text-h: #f5f3f9;
+    --bg: #121016;
+    --surface: #18161f;
+    --border: #2c2938;
+    --code-bg: #201d29;
+    --accent: #a855f7;
+    --accent-2: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.14);
+    --accent-border: rgba(192, 132, 252, 0.4);
+    --success: #4ade80;
+    --success-bg: rgba(74, 222, 128, 0.12);
+    --danger: #f87171;
+    --danger-bg: rgba(248, 113, 113, 0.12);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 16px 32px -14px rgba(0, 0, 0, 0.55), 0 2px 8px -2px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background:
+    radial-gradient(1100px 560px at 12% -12%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    radial-gradient(900px 520px at 105% 0%, color-mix(in srgb, #38bdf8 12%, transparent), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 5px;
+  color: var(--text-h);
+  font-size: 0.9em;
+  line-height: 135%;
+  padding: 2px 6px;
+  background: var(--code-bg);
+}
+
+::selection {
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
