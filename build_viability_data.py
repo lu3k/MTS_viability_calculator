@@ -38,14 +38,20 @@ the live Excel formulas still embedded in some of their cells:
 Usage:
     python build_viability_data.py RAW.xlsx
     python build_viability_data.py RAW.xlsx -o OUT.xlsx
-    python build_viability_data.py RAW.xlsx --drug1 Brigatinib --drug2 Crizotinib --cell-line "MOLM13 resistant"
+    python build_viability_data.py RAW.xlsx --drug1 Brigatinib --drug2 Crizotinib --cell-line1 "MOLM13 resistant"
+    python build_viability_data.py RAW.xlsx --drug1 Brigatinib --cell-line1 "MOLM13 parental" --cell-line2 "MOLM13 resistant"
     python build_viability_data.py RAW.xlsx --medium-control1 0.223 --medium-control2 0.219
 
---drug1/--drug2/--cell-line default to placeholder text (see PLACEHOLDER_*
-below) so the labels can just be typed in by hand afterward. The two medium
-control wells (M47/M48) are read from the raw plate by default, but can be
-passed in explicitly with --medium-control1/--medium-control2 (e.g. if a
-fresh export doesn't have those wells measured, or to override them).
+--drug1/--drug2 (rows B-D / rows E-G) and --cell-line1/--cell-line2 (same
+row split) default to placeholder text (see PLACEHOLDER_* below) so the
+labels can just be typed in by hand afterward. Rows B-D and E-G can be the
+same cell line with two different drugs (the common case - pass just
+--cell-line1, it's used for both), the same drug across two different cell
+lines (pass the same --drug1/--drug2, different --cell-line1/--cell-line2),
+or both different. The two medium control wells (M47/M48) are read from the
+raw plate by default, but can be passed in explicitly with
+--medium-control1/--medium-control2 (e.g. if a fresh export doesn't have
+those wells measured, or to override them).
 """
 
 import argparse
@@ -112,14 +118,31 @@ def write_dose_header_formulas(ws, row, col0):
     ws.cell(row=row, column=col0, value=0)
 
 
-def build(path, drug1=None, drug2=None, cell_line=None,
+def build(path, drug1=None, drug2=None, cell_line1=None, cell_line2=None,
           medium_control1=None, medium_control2=None):
     wb = openpyxl.load_workbook(path)
     ws = wb.worksheets[0]
 
     drug1 = drug1 or PLACEHOLDER_DRUG1
     drug2 = drug2 or PLACEHOLDER_DRUG2
-    cell_line = cell_line or PLACEHOLDER_CELL_LINE
+
+    # Rows B-D and E-G can be the same cell line with two different drugs
+    # (the common case), the same drug across two different cell lines, or
+    # both different. If only one of cell_line1/cell_line2 is given, it's
+    # used for both rows (matching the old single --cell-line flag); if
+    # neither is given, both fall back to the placeholder.
+    if cell_line1 is None and cell_line2 is None:
+        cell_line1 = cell_line2 = PLACEHOLDER_CELL_LINE
+    elif cell_line1 is None:
+        cell_line1 = cell_line2
+    elif cell_line2 is None:
+        cell_line2 = cell_line1
+
+    # The title cell only has room for one label: collapse it to a single
+    # name when both blocks share a cell line, and show "cell_line1 /
+    # cell_line2" (rows B-D / rows E-G, same left-to-right order as
+    # drug1/drug2) when they don't.
+    cell_line_label = cell_line1 if cell_line1 == cell_line2 else f"{cell_line1} / {cell_line2}"
 
     anchor_row, anchor_col = find_anchor(ws)
     grid = read_raw_plate(ws, anchor_row, anchor_col)
@@ -176,7 +199,7 @@ def build(path, drug1=None, drug2=None, cell_line=None,
 
     # --- Block 1: raw absorbance, reshaped from the raw well grid ---
     ws.cell(row=row_title1, column=col_P, value="MTS Absorbance 490 nm")
-    ws.cell(row=row_dose1, column=col_O, value=cell_line)
+    ws.cell(row=row_dose1, column=col_O, value=cell_line_label)
     write_dose_header_formulas(ws, row_dose1, col_P)
     ws.cell(row=row_dose1, column=col_Z, value=DOSE_UNIT)
     for i in range(6):  # rows 43..48
@@ -240,7 +263,7 @@ def build(path, drug1=None, drug2=None, cell_line=None,
             ws.cell(row=r, column=dst_col,
                     value=f"={col(src_col)}{r}/${col(col_AA)}${ctrl_row}")
 
-    return wb, dict(cell_line=cell_line, drug1=drug1, drug2=drug2,
+    return wb, dict(cell_line1=cell_line1, cell_line2=cell_line2, drug1=drug1, drug2=drug2,
                      medium_control1=medium_control1, medium_control2=medium_control2)
 
 
@@ -286,7 +309,10 @@ def main():
                           "directory mode: output directory (default: same as input)")
     ap.add_argument("--drug1", help="override drug 1 name (rows B-D); single-file mode only")
     ap.add_argument("--drug2", help="override drug 2 name (rows E-G); single-file mode only")
-    ap.add_argument("--cell-line", help="override cell line label; single-file mode only")
+    ap.add_argument("--cell-line1", help="override cell line label for rows B-D; single-file mode "
+                                          "only. If --cell-line2 is omitted, this is used for both")
+    ap.add_argument("--cell-line2", help="override cell line label for rows E-G; single-file mode "
+                                          "only. If --cell-line1 is omitted, this is used for both")
     ap.add_argument("--medium-control1", type=float,
                      help="medium control / blank value for M47 (row F); read from the plate if "
                           "omitted. In directory mode, applied to every file in the batch")
@@ -298,9 +324,10 @@ def main():
     in_path = Path(args.input)
 
     if in_path.is_dir():
-        if args.drug1 is not None or args.drug2 is not None or args.cell_line is not None:
-            ap.error("--drug1/--drug2/--cell-line apply to a single file only; run per-file for "
-                      "a directory with different plates")
+        if (args.drug1 is not None or args.drug2 is not None
+                or args.cell_line1 is not None or args.cell_line2 is not None):
+            ap.error("--drug1/--drug2/--cell-line1/--cell-line2 apply to a single file only; run "
+                      "per-file for a directory with different plates")
 
         results = build_directory(in_path, output_dir=args.output,
                                    medium_control1=args.medium_control1,
@@ -316,13 +343,15 @@ def main():
 
     out_path = Path(args.output) if args.output else in_path.with_name(in_path.stem + "_processed.xlsx")
 
-    wb, info = build(in_path, drug1=args.drug1, drug2=args.drug2, cell_line=args.cell_line,
+    wb, info = build(in_path, drug1=args.drug1, drug2=args.drug2,
+                      cell_line1=args.cell_line1, cell_line2=args.cell_line2,
                       medium_control1=args.medium_control1, medium_control2=args.medium_control2)
     wb.save(out_path)
 
-    print(f"cell line: {info['cell_line']}")
-    print(f"drug 1:    {info['drug1']}")
-    print(f"drug 2:    {info['drug2']}")
+    print(f"cell line (rows B-D): {info['cell_line1']}")
+    print(f"cell line (rows E-G): {info['cell_line2']}")
+    print(f"drug 1 (rows B-D):    {info['drug1']}")
+    print(f"drug 2 (rows E-G):    {info['drug2']}")
     print(f"medium control M47: {info['medium_control1']}")
     print(f"medium control M48: {info['medium_control2']}")
     print(f"wrote:     {out_path} (calculated cells contain live Excel formulas)")
